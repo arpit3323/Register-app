@@ -14,7 +14,7 @@ pipeline {
           }
         stage ("Git Checkout") {
                steps {
-                  git branch: 'main', credentialId: 'github' , url: 'https://github.com/arpit3323/Register-app'
+                  git branch: 'main', credentialsId: 'github' , url: 'https://github.com/arpit3323/Register-app'
                }
         }
 
