@@ -6,81 +6,55 @@ pipeline {
     }
 
     environment { 
-	    APP_NAME = "register_app"
-	    RELEASE = "1.0.0"
-	    DOCKER_USER = "arpit3323"
-	    DOCKER_PASS = "dockerhub"
-	    IMAGE_NAME = "${DOCKER_USER}" + "/" + "${APP_NAME}"
-            IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
+        APP_NAME = "register-app"
+        RELEASE = "1.0.0"
+        DOCKER_USER = "arpit3323"
+        DOCKER_PASS = "dockerhub"
+        IMAGE_NAME = "${DOCKER_USER}/${APP_NAME}"
     }
+
     stages {
-          stage ("Cleanup Workspace") {
-                steps {
-                 cleanWs() 
+        stage("Cleanup Workspace") {
+            steps {
+                cleanWs() 
+            }   
+        }
+        stage("Git Checkout") {
+            steps {
+                git branch: 'main', credentialsId: 'github' , url: 'https://github.com/arpit3323/Register-app'
+            }
+        }
+        stage("Build Application") {
+            steps {
+                sh "mvn clean package"
+            }
+        }
+        stage("Test Application") {
+            steps {
+                sh "mvn test"
+            }
+        }
+        stage("SonarQube Analysis") {
+            steps {
+                withSonarQubeEnv(credentialsId: 'jenkins-sonar-cube') {
+                    sh "mvn sonar:sonar"
                 }
-            
-          }
-        stage ("Git Checkout") {
-               steps {
-                  git branch: 'main', credentialsId: 'github' , url: 'https://github.com/arpit3323/Register-app'
-               }
+            }
         }
-
-        stage ("Build Application") {
-               steps {
-                  sh "mvn clean package"
-               }
+        stage("Quality Gate") {
+            steps {
+                waitForQualityGate abortPipeline: false, credentialsId: 'jenkins-sonar-cube'
+            }
         }
-
-      stage ("Test Application") {
-               steps {
-                  sh "mvn test"
-               }
+        stage("Build & Push Docker Image") {
+            steps {
+                script {
+                    docker.withRegistry('', DOCKER_PASS) {
+                        def docker_image = docker.build("${IMAGE_NAME}")
+                        docker_image.push("latest")
+                    }
+                }
+            }
         }
-
-	stage ("SonarQube Analysis") {
-               steps {
-                       script {
-		             withSonarQubeEnv(credentialsId: 'jenkins-sonar-cube'){
-			      sh "mvn sonar:sonar"
-
-			     }
-
-		       }
-               }
-
-          }
-	    stage ("Quality Gate") {
-               steps {
-                       script {
-		             waitForQualityGate abortPipeline: false, credentialsId: 'jenkins-sonar-cube'
-		       
-		       }
-               }
-
-          }
-
-	  stage ("Build & Push Docker Image") {
-               steps {
-                       script {
-		             docker.withRegistry('',DOCKER_PASS){
-				     
-                       	     // Build the Docker image
-                       	    docker_image = docker.build("${IMAGE_NAME}")
-				     
-                            // Tag the Docker image with "latest"
-                            docker_image.tag("${IMAGE_NAME}:latest")
-				     
-                            // Push the Docker image with the latest tag
-                      	   docker_image.push("latest")
-				     
-			     }
-
-			
-		       
-		       }
-               }
-
-          }
     }
 }
