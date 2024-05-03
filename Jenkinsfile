@@ -64,10 +64,13 @@ pipeline {
                steps {
                        script {
 		             docker.withRegistry('',DOCKER_PASS){
+				     
                        	     // Build the Docker image
-                       	    docker_image = docker.build "${IMAGE_NAME}"
+                       	    docker_image = docker.build("${IMAGE_NAME}")
+				     
                             // Tag the Docker image with "latest"
-                            docker_image.tag("${docker_image}:latest")
+                            docker_image.tag("${IMAGE_NAME}:latest")
+				     
                             // Push the Docker image with the latest tag
                       	   docker_image.push("latest")
 				     
